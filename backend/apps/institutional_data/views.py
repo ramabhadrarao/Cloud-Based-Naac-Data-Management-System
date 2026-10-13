@@ -7,7 +7,7 @@ from .models import (
     InstitutionMembership, InstitutionalFact, MetricDataMapping, Programme,
     ReportSnapshot,
 )
-from .permissions import HasInstitutionalAccess
+from .permissions import HasInstitutionalAccess, WRITE_ROLES
 from .serializers import (
     AcademicYearSerializer, DataElementSerializer, DepartmentSerializer,
     EvidenceAssetSerializer, FrameworkCriterionSerializer, FrameworkEditionSerializer,
@@ -38,17 +38,11 @@ class InstitutionScopedViewSet(viewsets.ModelViewSet):
             return
         institution = serializer.validated_data.get("institution")
         if institution is None:
-            raise ValueError("An institution must be provided.")
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"institution": "An institution must be provided."})
         role_allowed = InstitutionMembership.objects.filter(
             user=user, institution=institution, is_active=True, institution__is_active=True,
-            role__in=HasInstitutionalAccess.allowed_write_roles if hasattr(HasInstitutionalAccess, "allowed_write_roles") else [
-                InstitutionMembership.Role.INSTITUTION_ADMIN,
-                InstitutionMembership.Role.PRINCIPAL,
-                InstitutionMembership.Role.IQAC_COORDINATOR,
-                InstitutionMembership.Role.FRAMEWORK_COORDINATOR,
-                InstitutionMembership.Role.HOD,
-                InstitutionMembership.Role.DATA_OWNER,
-            ],
+            role__in=WRITE_ROLES,
         ).exists()
         if not role_allowed:
             from rest_framework.exceptions import PermissionDenied

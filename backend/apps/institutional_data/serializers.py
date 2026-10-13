@@ -98,7 +98,7 @@ class InstitutionalFactSerializer(serializers.ModelSerializer):
     submitted_by = serializers.PrimaryKeyRelatedField(read_only=True)
     verified_by = serializers.PrimaryKeyRelatedField(read_only=True)
     approved_by = serializers.PrimaryKeyRelatedField(read_only=True)
-    status = serializers.ChoiceField(choices=__import__("apps.institutional_data.models", fromlist=["InstitutionalFact"]).InstitutionalFact.Status.choices, read_only=True)
+    status = serializers.ChoiceField(choices=InstitutionalFact.Status.choices, read_only=True)
 
     class Meta:
         model = InstitutionalFact

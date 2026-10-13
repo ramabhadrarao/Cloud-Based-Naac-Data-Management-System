@@ -116,11 +116,53 @@ class InstitutionalFactSerializer(serializers.ModelSerializer):
             "approved_by", "approved_at", "created_by", "created_at", "updated_at",
         ]
 
+    @staticmethod
+    def _matches_value_type(value, value_type):
+        if value_type == "text":
+            return isinstance(value, str)
+        if value_type == "integer":
+            return isinstance(value, int) and not isinstance(value, bool)
+        if value_type == "decimal":
+            return isinstance(value, (int, float)) and not isinstance(value, bool)
+        if value_type == "boolean":
+            return isinstance(value, bool)
+        if value_type == "date":
+            if not isinstance(value, str):
+                return False
+            from datetime import date
+            try:
+                date.fromisoformat(value)
+                return True
+            except ValueError:
+                return False
+        if value_type == "record":
+            return isinstance(value, dict)
+        if value_type == "record_set":
+            return isinstance(value, list)
+        return False
+
     def validate(self, attrs):
         request = self.context.get("request")
         institution = attrs.get("institution", getattr(self.instance, "institution", None))
         academic_year = attrs.get("academic_year", getattr(self.instance, "academic_year", None))
         supersedes = attrs.get("supersedes", getattr(self.instance, "supersedes", None))
+        element = attrs.get("data_element", getattr(self.instance, "data_element", None))
+        scope_type = attrs.get("scope_type", getattr(self.instance, "scope_type", "institution"))
+        scope_key = attrs.get("scope_key", getattr(self.instance, "scope_key", ""))
+        value = attrs.get("value", getattr(self.instance, "value", None))
+
+        if self.instance and "institution" in attrs and attrs["institution"].id != self.instance.institution_id:
+            raise serializers.ValidationError({"institution": "Institution is immutable. Create a new fact in the correct institution."})
+        if element is not None:
+            allowed_scopes = element.scope_policy.get("allowed_scopes", [])
+            if allowed_scopes and scope_type not in allowed_scopes:
+                raise serializers.ValidationError({"scope_type": "This scope is not allowed by the data-element definition."})
+            if scope_type != "institution" and not scope_key:
+                raise serializers.ValidationError({"scope_key": "A scope identifier is required for this scope type."})
+            if element.scope_policy.get("academic_year_required") and academic_year is None:
+                raise serializers.ValidationError({"academic_year": "This data element requires an academic year."})
+            if "value" in attrs and not self._matches_value_type(value, element.value_type):
+                raise serializers.ValidationError({"value": f"Value does not match the data element type '{element.value_type}'."})
 
         if self.instance and self.instance.status in (
             InstitutionalFact.Status.APPROVED, InstitutionalFact.Status.SUPERSEDED
@@ -163,6 +205,8 @@ class EvidenceAssetSerializer(serializers.ModelSerializer):
         source_record_id = attrs.get("source_record_id", getattr(self.instance, "source_record_id", ""))
         if not (storage_key or external_url or source_record_id):
             raise serializers.ValidationError("Provide a storage key, external URL, or source record reference.")
+        if self.instance and "institution" in attrs and attrs["institution"].id != self.instance.institution_id:
+            raise serializers.ValidationError({"institution": "Institution is immutable. Create a new evidence record in the correct institution."})
         if institution and supersedes and supersedes.institution_id != institution.id:
             raise serializers.ValidationError({"supersedes": "Prior evidence must belong to the same institution."})
         if request and institution and not request.user.is_superuser:
@@ -171,6 +215,22 @@ class EvidenceAssetSerializer(serializers.ModelSerializer):
             ).exists()
             if not allowed:
                 raise serializers.ValidationError({"institution": "You do not have access to this institution."})
+        return attrs
+
+
+class FactEvidenceLinkSerializer(serializers.ModelSerializer):
+    linked_by = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = FactEvidenceLink
+        fields = ["id", "fact", "evidence", "notes", "linked_by", "linked_at"]
+        read_only_fields = ["id", "linked_by", "linked_at"]
+
+    def validate(self, attrs):
+        fact = attrs.get("fact", getattr(self.instance, "fact", None))
+        evidence = attrs.get("evidence", getattr(self.instance, "evidence", None))
+        if fact and evidence and fact.institution_id != evidence.institution_id:
+            raise serializers.ValidationError("Fact and evidence must belong to the same institution.")
         return attrs
 
 

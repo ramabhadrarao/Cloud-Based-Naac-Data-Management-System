@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from .models import (
-    AcademicYear, DataElement, Department, EvidenceAsset, Framework,
+    AcademicYear, DataElement, Department, EvidenceAsset, FactEvidenceLink, Framework,
     FrameworkCriterion, FrameworkEdition, FrameworkMetric, Institution,
     InstitutionalFact, MetricDataMapping, Programme, ReportSnapshot,
 )
@@ -161,7 +161,7 @@ class InstitutionalFactSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({"scope_key": "A scope identifier is required for this scope type."})
             if element.scope_policy.get("academic_year_required") and academic_year is None:
                 raise serializers.ValidationError({"academic_year": "This data element requires an academic year."})
-            if "value" in attrs and not self._matches_value_type(value, element.value_type):
+            if ("value" in attrs or "data_element" in attrs) and not self._matches_value_type(value, element.value_type):
                 raise serializers.ValidationError({"value": f"Value does not match the data element type '{element.value_type}'."})
 
         if self.instance and self.instance.status in (
@@ -225,6 +225,13 @@ class FactEvidenceLinkSerializer(serializers.ModelSerializer):
         model = FactEvidenceLink
         fields = ["id", "fact", "evidence", "notes", "linked_by", "linked_at"]
         read_only_fields = ["id", "linked_by", "linked_at"]
+
+    def get_fields(self):
+        fields = super().get_fields()
+        if self.instance is not None:
+            fields["fact"].read_only = True
+            fields["evidence"].read_only = True
+        return fields
 
     def validate(self, attrs):
         fact = attrs.get("fact", getattr(self.instance, "fact", None))

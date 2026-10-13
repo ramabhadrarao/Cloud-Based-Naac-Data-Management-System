@@ -443,3 +443,20 @@ Before deploying beyond local dev, at minimum:
 Full Stack Developer • AI/ML Enthusiast • Salesforce Developer
 
 </div>
+
+## Multi-framework institutional data foundation (in progress)
+
+A first-pass common data layer is being added on the `feature/multi-framework-core` branch. It separates reusable institutional facts and evidence from versioned framework definitions so the same approved fact can be mapped to applicable NAAC, NBA, NIRF, AICTE, IIC, AISHE and affiliation/university requirements.
+
+- Architecture and delivery plan: [docs/MULTI_FRAMEWORK_ARCHITECTURE.md](docs/MULTI_FRAMEWORK_ARCHITECTURE.md)
+- Common data dictionary: [docs/data-model/MULTI_FRAMEWORK_DATA_DICTIONARY.md](docs/data-model/MULTI_FRAMEWORK_DATA_DICTIONARY.md)
+- Module mapping matrix: [docs/data-model/FRAMEWORK_MODULE_MATRIX.md](docs/data-model/FRAMEWORK_MODULE_MATRIX.md)
+
+Initial API namespace: `/api/institutional-data/`. Framework registry rows are seeded with:
+
+```bash
+python manage.py migrate
+python manage.py seed_framework_registry
+```
+
+The seed command creates framework identities only. It does **not** claim to install current official criteria, metric formulas, accreditation scores or portal submissions. Each framework edition must be loaded from reviewed, versioned configuration based on the applicable official guidance. Validate database migrations, API permissions and the deployment configuration before using real institutional records.

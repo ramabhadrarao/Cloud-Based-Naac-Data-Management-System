@@ -247,6 +247,7 @@ class Migration(migrations.Migration):
                 ("confidentiality", models.CharField(choices=[("public", "Public"), ("internal", "Internal"), ("confidential", "Confidential")], default="internal", max_length=16)),
                 ("uploaded_at", models.DateTimeField(auto_now_add=True)),
                 ("institution", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="evidence_assets", to="institutional_data.institution")),
+                ("department", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name="evidence_assets", to="institutional_data.department")),
                 ("supersedes", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="superseded_by", to="institutional_data.evidenceasset")),
                 ("uploaded_by", models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name="uploaded_evidence_assets", to=settings.AUTH_USER_MODEL)),
             ],

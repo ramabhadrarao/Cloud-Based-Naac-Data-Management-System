@@ -62,7 +62,7 @@ def membership_can_access_object(membership, obj):
     if is_global_membership(membership):
         return True
     department = membership.department
-    if department is None:
+    if department is None or membership.role not in {InstitutionMembership.Role.HOD, InstitutionMembership.Role.DATA_OWNER}:
         return False
 
     model_name = obj._meta.model_name

@@ -35,6 +35,7 @@ class InstitutionMembership(models.Model):
         READ_ONLY = "read_only", "Read-only"
 
     institution = models.ForeignKey(Institution, on_delete=models.CASCADE, related_name="memberships")
+    department = models.ForeignKey("Department", on_delete=models.CASCADE, null=True, blank=True, related_name="memberships")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="institution_memberships")
     role = models.CharField(max_length=32, choices=Role.choices)
     is_active = models.BooleanField(default=True)
@@ -42,12 +43,19 @@ class InstitutionMembership(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["institution", "user"], name="uniq_inst_membership_user")
+            models.UniqueConstraint(fields=["institution", "user", "role"], name="uniq_inst_user_role")
         ]
         indexes = [models.Index(fields=["user", "is_active"], name="idmem_user_active_idx")]
 
+    def clean(self):
+        if self.department_id and self.institution_id and self.department.institution_id != self.institution_id:
+            raise ValidationError({"department": "Department must belong to the same institution."})
+        if self.role == self.Role.HOD and not self.department_id:
+            raise ValidationError({"department": "A HOD membership must be assigned to a department."})
+
     def __str__(self):
-        return f"{self.user} · {self.institution} · {self.role}"
+        scope = self.department.code if self.department_id else "institution-wide"
+        return f"{self.user} · {self.institution} · {self.role} · {scope}"
 
 
 class AcademicYear(models.Model):

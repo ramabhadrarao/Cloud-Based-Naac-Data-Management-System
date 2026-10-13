@@ -61,7 +61,7 @@ class AcademicYear(models.Model):
         ordering = ["-start_date"]
         constraints = [
             models.UniqueConstraint(fields=["institution", "label"], name="uniq_inst_academic_year"),
-            models.CheckConstraint(condition=Q(end_date__gte=models.F("start_date")), name="academic_year_date_order"),
+            models.CheckConstraint(check=Q(end_date__gte=models.F("start_date")), name="academic_year_date_order"),
         ]
 
     def clean(self):

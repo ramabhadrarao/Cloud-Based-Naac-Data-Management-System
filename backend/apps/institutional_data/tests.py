@@ -30,7 +30,7 @@ class InstitutionalDataModelTests(TestCase):
             default_unit="persons",
         )
 
-    def test_membership_unique_per_institution_and_user(self):
+    def test_membership_unique_per_institution_user_and_role(self):
         InstitutionMembership.objects.create(
             institution=self.institution, user=self.user,
             role=InstitutionMembership.Role.IQAC_COORDINATOR,
@@ -39,8 +39,16 @@ class InstitutionalDataModelTests(TestCase):
             with transaction.atomic():
                 InstitutionMembership.objects.create(
                     institution=self.institution, user=self.user,
-                    role=InstitutionMembership.Role.DATA_OWNER,
+                    role=InstitutionMembership.Role.IQAC_COORDINATOR,
                 )
+
+    def test_hod_membership_requires_department(self):
+        membership = InstitutionMembership(
+            institution=self.institution, user=self.user,
+            role=InstitutionMembership.Role.HOD,
+        )
+        with self.assertRaises(ValidationError):
+            membership.full_clean()
 
     def test_fact_must_use_academic_year_from_same_institution(self):
         other = Institution.objects.create(code="other-college", name="Other College")

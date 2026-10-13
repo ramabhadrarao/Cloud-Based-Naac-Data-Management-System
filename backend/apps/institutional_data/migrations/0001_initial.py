@@ -97,11 +97,12 @@ class Migration(migrations.Migration):
                 ("is_active", models.BooleanField(default=True)),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("institution", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="memberships", to="institutional_data.institution")),
+                ("department", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name="memberships", to="institutional_data.department")),
                 ("user", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="institution_memberships", to=settings.AUTH_USER_MODEL)),
             ],
             options={
                 "constraints": [
-                    models.UniqueConstraint(fields=("institution", "user"), name="uniq_inst_membership_user"),
+                    models.UniqueConstraint(fields=("institution", "user", "role"), name="uniq_inst_user_role"),
                 ],
                 "indexes": [
                     models.Index(fields=["user", "is_active"], name="idmem_user_active_idx"),

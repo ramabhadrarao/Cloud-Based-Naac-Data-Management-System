@@ -185,7 +185,8 @@ class InstitutionalFactSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({"institution": "You do not have access to this institution."})
             from .permissions import GLOBAL_WRITE_ROLES, membership_can_scope_fact
             scope_allowed = any(
-                (m.department_id is None and m.role != "hod")
+                (m.department_id is None and m.role in GLOBAL_WRITE_ROLES)
+                or (m.department_id is None and m.role == "data_owner")
                 or (m.role in {"hod", "data_owner"} and membership_can_scope_fact(m, scope_type, scope_key))
                 for m in memberships
             )

@@ -174,13 +174,23 @@ class InstitutionalFactSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"academic_year": "Academic year must belong to the selected institution."})
         if institution and supersedes and supersedes.institution_id != institution.id:
             raise serializers.ValidationError({"supersedes": "The prior fact must belong to the same institution."})
+        if supersedes and element and (supersedes.data_element_id != element.id or supersedes.academic_year_id != getattr(academic_year, "id", None) or supersedes.scope_type != scope_type or supersedes.scope_key != scope_key):
+            raise serializers.ValidationError({"supersedes": "A superseded fact must match the data element, academic year and scope."})
 
         if request and institution and not request.user.is_superuser:
-            allowed = request.user.institution_memberships.filter(
-                institution=institution, is_active=True
-            ).exists()
-            if not allowed:
+            memberships = list(request.user.institution_memberships.filter(
+                institution=institution, is_active=True, institution__is_active=True
+            ).select_related("department"))
+            if not memberships:
                 raise serializers.ValidationError({"institution": "You do not have access to this institution."})
+            from .permissions import GLOBAL_WRITE_ROLES, membership_can_scope_fact
+            scope_allowed = any(
+                (m.department_id is None and m.role != "hod")
+                or (m.role in {"hod", "data_owner"} and membership_can_scope_fact(m, scope_type, scope_key))
+                for m in memberships
+            )
+            if not scope_allowed:
+                raise serializers.ValidationError({"scope_type": "Your membership cannot access this department/programme scope."})
         return attrs
 
 
@@ -208,10 +218,14 @@ class EvidenceAssetSerializer(serializers.ModelSerializer):
         if self.instance and "institution" in attrs and attrs["institution"].id != self.instance.institution_id:
             raise serializers.ValidationError({"institution": "Institution is immutable. Create a new evidence record in the correct institution."})
         department = attrs.get("department", getattr(self.instance, "department", None))
+        if self.instance and "department" in attrs and getattr(attrs["department"], "id", None) != self.instance.department_id:
+            raise serializers.ValidationError({"department": "Evidence department is immutable; create a new version in the correct scope."})
         if department and institution and department.institution_id != institution.id:
             raise serializers.ValidationError({"department": "Department must belong to the selected institution."})
         if institution and supersedes and supersedes.institution_id != institution.id:
             raise serializers.ValidationError({"supersedes": "Prior evidence must belong to the same institution."})
+        if department and supersedes and supersedes.department_id != department.id:
+            raise serializers.ValidationError({"supersedes": "Superseded evidence must belong to the same department scope."})
         if request and institution and not request.user.is_superuser:
             allowed = request.user.institution_memberships.filter(
                 institution=institution, is_active=True

@@ -16,7 +16,7 @@ class InstitutionAdmin(admin.ModelAdmin):
 
 @admin.register(InstitutionMembership)
 class InstitutionMembershipAdmin(admin.ModelAdmin):
-    list_display = ("institution", "user", "role", "is_active")
+    list_display = ("institution", "department", "user", "role", "is_active")
     list_filter = ("institution", "role", "is_active")
     search_fields = ("user__username", "user__email", "institution__name")
 

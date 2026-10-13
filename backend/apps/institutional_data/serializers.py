@@ -190,7 +190,7 @@ class EvidenceAssetSerializer(serializers.ModelSerializer):
     class Meta:
         model = EvidenceAsset
         fields = [
-            "id", "institution", "title", "description", "storage_key", "external_url",
+            "id", "institution", "department", "title", "description", "storage_key", "external_url",
             "source_system", "source_record_id", "sha256", "mime_type", "file_size",
             "version", "confidentiality", "uploaded_by", "uploaded_at", "supersedes",
         ]
@@ -207,6 +207,9 @@ class EvidenceAssetSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Provide a storage key, external URL, or source record reference.")
         if self.instance and "institution" in attrs and attrs["institution"].id != self.instance.institution_id:
             raise serializers.ValidationError({"institution": "Institution is immutable. Create a new evidence record in the correct institution."})
+        department = attrs.get("department", getattr(self.instance, "department", None))
+        if department and institution and department.institution_id != institution.id:
+            raise serializers.ValidationError({"department": "Department must belong to the selected institution."})
         if institution and supersedes and supersedes.institution_id != institution.id:
             raise serializers.ValidationError({"supersedes": "Prior evidence must belong to the same institution."})
         if request and institution and not request.user.is_superuser:
@@ -238,6 +241,13 @@ class FactEvidenceLinkSerializer(serializers.ModelSerializer):
         evidence = attrs.get("evidence", getattr(self.instance, "evidence", None))
         if fact and evidence and fact.institution_id != evidence.institution_id:
             raise serializers.ValidationError("Fact and evidence must belong to the same institution.")
+        if fact and evidence and evidence.department_id:
+            department = evidence.department
+            matches_department = fact.scope_type == InstitutionalFact.ScopeType.DEPARTMENT and fact.scope_key == department.code
+            from .models import Programme
+            matches_programme = fact.scope_type == InstitutionalFact.ScopeType.PROGRAMME and Programme.objects.filter(department=department, code=fact.scope_key).exists()
+            if not (matches_department or matches_programme):
+                raise serializers.ValidationError("Department-scoped evidence must support a fact in that department or its programme.")
         return attrs
 
 

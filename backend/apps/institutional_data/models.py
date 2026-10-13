@@ -44,7 +44,7 @@ class InstitutionMembership(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["institution", "user"], name="uniq_inst_membership_user")
         ]
-        indexes = [models.Index(fields=["user", "is_active"])]
+        indexes = [models.Index(fields=["user", "is_active"], name="idmem_user_active_idx")]
 
     def __str__(self):
         return f"{self.user} · {self.institution} · {self.role}"
@@ -286,8 +286,8 @@ class InstitutionalFact(models.Model):
     class Meta:
         ordering = ["-updated_at"]
         indexes = [
-            models.Index(fields=["institution", "academic_year", "status"]),
-            models.Index(fields=["data_element", "scope_type", "scope_key"]),
+            models.Index(fields=["institution", "academic_year", "status"], name="ifact_inst_year_status_idx"),
+            models.Index(fields=["data_element", "scope_type", "scope_key"], name="ifact_element_scope_idx"),
         ]
 
     def clean(self):
@@ -330,7 +330,7 @@ class EvidenceAsset(models.Model):
 
     class Meta:
         ordering = ["-uploaded_at"]
-        indexes = [models.Index(fields=["institution", "sha256"])]
+        indexes = [models.Index(fields=["institution", "sha256"], name="evidence_inst_sha256_idx")]
 
     def clean(self):
         if self.supersedes_id and self.supersedes.institution_id != self.institution_id:
@@ -403,7 +403,7 @@ class ReportSnapshot(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
-        indexes = [models.Index(fields=["institution", "edition", "status"])]
+        indexes = [models.Index(fields=["institution", "edition", "status"], name="report_inst_edition_idx")]
 
     def clean(self):
         if self.academic_year_id and self.institution_id and self.academic_year.institution_id != self.institution_id:

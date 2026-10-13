@@ -321,6 +321,7 @@ class EvidenceAsset(models.Model):
         CONFIDENTIAL = "confidential", "Confidential"
 
     institution = models.ForeignKey(Institution, on_delete=models.CASCADE, related_name="evidence_assets")
+    department = models.ForeignKey("Department", on_delete=models.PROTECT, null=True, blank=True, related_name="evidence_assets")
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     storage_key = models.CharField(max_length=500, blank=True, help_text="Object-storage key; do not store file bytes in this column.")
@@ -341,6 +342,8 @@ class EvidenceAsset(models.Model):
         indexes = [models.Index(fields=["institution", "sha256"], name="evidence_inst_sha256_idx")]
 
     def clean(self):
+        if self.department_id and self.institution_id and self.department.institution_id != self.institution_id:
+            raise ValidationError({"department": "Evidence department must belong to the same institution."})
         if self.supersedes_id and self.supersedes.institution_id != self.institution_id:
             raise ValidationError({"supersedes": "Evidence can only supersede evidence from the same institution."})
         if not self.storage_key and not self.external_url and not self.source_record_id:
@@ -365,6 +368,13 @@ class FactEvidenceLink(models.Model):
     def clean(self):
         if self.fact_id and self.evidence_id and self.fact.institution_id != self.evidence.institution_id:
             raise ValidationError("Fact and evidence must belong to the same institution.")
+        if self.fact_id and self.evidence_id and self.evidence.department_id:
+            fact = self.fact
+            department = self.evidence.department
+            matches_department = fact.scope_type == InstitutionalFact.ScopeType.DEPARTMENT and fact.scope_key == department.code
+            matches_programme = fact.scope_type == InstitutionalFact.ScopeType.PROGRAMME and Programme.objects.filter(department=department, code=fact.scope_key).exists()
+            if not (matches_department or matches_programme):
+                raise ValidationError("Department-scoped evidence can only support facts scoped to that department or one of its programmes.")
 
 
 class MetricDataMapping(models.Model):

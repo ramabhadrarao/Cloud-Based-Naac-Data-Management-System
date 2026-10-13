@@ -2,7 +2,7 @@ from rest_framework import mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
 
 from .models import (
-    AcademicYear, DataElement, Department, EvidenceAsset, Framework,
+    AcademicYear, DataElement, Department, EvidenceAsset, FactEvidenceLink, Framework,
     FrameworkCriterion, FrameworkEdition, FrameworkMetric, Institution,
     InstitutionMembership, InstitutionalFact, MetricDataMapping, Programme,
     ReportSnapshot,
@@ -10,7 +10,7 @@ from .models import (
 from .permissions import HasInstitutionalAccess, WRITE_ROLES
 from .serializers import (
     AcademicYearSerializer, DataElementSerializer, DepartmentSerializer,
-    EvidenceAssetSerializer, FrameworkCriterionSerializer, FrameworkEditionSerializer,
+    EvidenceAssetSerializer, FactEvidenceLinkSerializer, FrameworkCriterionSerializer, FrameworkEditionSerializer,
     FrameworkMetricSerializer, FrameworkSerializer, InstitutionSerializer,
     InstitutionalFactSerializer, MetricDataMappingSerializer, ProgrammeSerializer,
     ReportSnapshotSerializer,
@@ -153,6 +153,26 @@ class EvidenceAssetViewSet(InstitutionScopedViewSet):
 
     def create_user_fields(self):
         return {"uploaded_by": self.request.user}
+
+
+class FactEvidenceLinkViewSet(InstitutionScopedViewSet):
+    queryset = FactEvidenceLink.objects.select_related("fact", "fact__institution", "evidence", "linked_by").all()
+    serializer_class = FactEvidenceLinkSerializer
+    institution_path = "fact__institution_id"
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        fact = serializer.validated_data["fact"]
+        evidence = serializer.validated_data["evidence"]
+        if fact.institution_id != evidence.institution_id:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("Fact and evidence must belong to the same institution.")
+        if not user.is_superuser and not InstitutionMembership.objects.filter(
+            user=user, institution_id=fact.institution_id, is_active=True, role__in=WRITE_ROLES
+        ).exists():
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Your role cannot link evidence for this institution.")
+        serializer.save(linked_by=user)
 
 
 class MetricDataMappingViewSet(viewsets.ReadOnlyModelViewSet):

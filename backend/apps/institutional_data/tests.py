@@ -1,6 +1,7 @@
 from datetime import date
 
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 
@@ -34,11 +35,12 @@ class InstitutionalDataModelTests(TestCase):
             institution=self.institution, user=self.user,
             role=InstitutionMembership.Role.IQAC_COORDINATOR,
         )
-        with self.assertRaises(Exception):
-            InstitutionMembership.objects.create(
-                institution=self.institution, user=self.user,
-                role=InstitutionMembership.Role.DATA_OWNER,
-            )
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                InstitutionMembership.objects.create(
+                    institution=self.institution, user=self.user,
+                    role=InstitutionMembership.Role.DATA_OWNER,
+                )
 
     def test_fact_must_use_academic_year_from_same_institution(self):
         other = Institution.objects.create(code="other-college", name="Other College")

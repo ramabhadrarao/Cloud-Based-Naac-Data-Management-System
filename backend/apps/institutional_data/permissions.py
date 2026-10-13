@@ -27,6 +27,7 @@ class HasInstitutionalAccess(BasePermission):
     """Require an active institutional membership; enforce write roles for scoped data."""
 
     message = "Active membership and the required role for this institution are needed."
+    allowed_write_roles = WRITE_ROLES
 
     def has_permission(self, request, view):
         user = request.user

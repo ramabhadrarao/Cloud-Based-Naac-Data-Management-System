@@ -1,7 +1,7 @@
 from rest_framework.routers import DefaultRouter
 
 from .views import (
-    AcademicYearViewSet, DataElementViewSet, DepartmentViewSet, EvidenceAssetViewSet,
+    AcademicYearViewSet, DataElementViewSet, DepartmentViewSet, EvidenceAssetViewSet, FactEvidenceLinkViewSet,
     FrameworkCriterionViewSet, FrameworkEditionViewSet, FrameworkMetricViewSet,
     FrameworkViewSet, InstitutionViewSet, InstitutionalFactViewSet,
     MetricDataMappingViewSet, ProgrammeViewSet, ReportSnapshotViewSet,
@@ -19,6 +19,7 @@ router.register("metrics", FrameworkMetricViewSet, basename="framework-metric")
 router.register("data-elements", DataElementViewSet, basename="data-element")
 router.register("facts", InstitutionalFactViewSet, basename="institutional-fact")
 router.register("evidence", EvidenceAssetViewSet, basename="evidence-asset")
+router.register("fact-evidence-links", FactEvidenceLinkViewSet, basename="fact-evidence-link")
 router.register("metric-mappings", MetricDataMappingViewSet, basename="metric-data-mapping")
 router.register("report-snapshots", ReportSnapshotViewSet, basename="report-snapshot")
 

@@ -20,6 +20,9 @@ def _institution_id_for_object(obj):
     department = getattr(obj, "department", None)
     if department is not None:
         return getattr(department, "institution_id", None)
+    fact = getattr(obj, "fact", None)
+    if fact is not None:
+        return getattr(fact, "institution_id", None)
     return None
 
 
